@@ -49,3 +49,6 @@ service-account.pem
 service-account-csr.json
 *.swp
 .idea/
+.vagrant/
+ansible/vagrant.ini
+*.retry
