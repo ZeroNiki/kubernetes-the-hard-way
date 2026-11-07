@@ -1,43 +1,80 @@
-# Kubernetes The Hard Way
+# Kubernetes The Hard Way: Vagrant + libvirt + Ansible
 
-This tutorial walks you through setting up Kubernetes the hard way. This guide is not for someone looking for a fully automated tool to bring up a Kubernetes cluster. Kubernetes The Hard Way is optimized for learning, which means taking the long route to ensure you understand each task required to bootstrap a Kubernetes cluster.
+**English** | [Русский](README.ru.md)
 
-> The results of this tutorial should not be viewed as production ready, and may receive limited support from the community, but don't let that stop you from learning!
+A fork of Kelsey Hightower's [Kubernetes The Hard Way](https://github.com/kelseyhightower/kubernetes-the-hard-way). The original tutorial is kept as is in [`docs/`](docs). This fork adds:
 
-## Copyright
+- a [`Vagrantfile`](Vagrantfile) that brings up four Debian 12 VMs on libvirt/KVM;
+- a step-by-step manual guide adapted to this lab, in English and Russian;
+- an [Ansible playbook](ansible) that builds the same cluster automatically.
 
-<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+> [!WARNING]
+> This is a learning lab, not a production cluster: root login with a password, etcd without TLS and the encryption key in a plain file are acceptable only here.
 
+## Lab
 
-## Target Audience
+```mermaid
+flowchart LR
+    H["Host<br/>Vagrant + libvirt"] --> J["jumpbox<br/>192.168.56.9"]
+    H --> M["manager01<br/>192.168.56.10<br/>etcd, control plane"]
+    H --> W1["worker01<br/>192.168.56.11<br/>10.244.1.0/24"]
+    H --> W2["worker02<br/>192.168.56.12<br/>10.244.2.0/24"]
+```
 
-The target audience for this tutorial is someone who wants to understand the fundamentals of Kubernetes and how the core components fit together.
+| Component | Version |
+| --- | --- |
+| Kubernetes | v1.32.3 |
+| etcd | v3.6.0-rc.3 |
+| containerd | 2.1.0-beta.0 |
+| runc | v1.3.0-rc.1 |
+| CNI plugins | v1.6.2 |
+| OS | Debian 12 (`debian/bookworm64` box) |
 
-## Cluster Details
+## Guides
 
-Kubernetes The Hard Way guides you through bootstrapping a basic Kubernetes cluster with all control plane components running on a single node, and two worker nodes, which is enough to learn the core concepts.
+| # | Guide | English | Русский |
+| --- | --- | --- | --- |
+| 1 | Host setup: what to install, starting the VMs | [01-host-setup](guide/en/01-host-setup.md) | [01-host-setup](guide/ru/01-host-setup.md) |
+| 2 | Manual cluster build | [02-manual](guide/en/02-manual.md) | [02-manual](guide/ru/02-manual.md) |
+| 3 | Ansible build | [03-ansible](guide/en/03-ansible.md) | [03-ansible](guide/ru/03-ansible.md) |
 
-Component versions:
+## Quick Start
 
-* [kubernetes](https://github.com/kubernetes/kubernetes) v1.32.x
-* [containerd](https://github.com/containerd/containerd) v2.1.x
-* [cni](https://github.com/containernetworking/cni) v1.6.x
-* [etcd](https://github.com/etcd-io/etcd) v3.6.x
+```bash
+git clone https://github.com/ZeroNiki/kubernetes-the-hard-way.git
+cd kubernetes-the-hard-way
+vagrant up --provider=libvirt
 
-## Labs
+cd ansible
+cp vagrant.ini.example vagrant.ini
+ansible all -m ping
+ansible-playbook playbook.yml
+```
 
-This tutorial requires four (4) ARM64 or AMD64 based virtual or physical machines connected to the same network.
+Host requirements and installation commands for Debian/Ubuntu, Fedora and Arch Linux are in [Host Setup](guide/en/01-host-setup.md).
 
-* [Prerequisites](docs/01-prerequisites.md)
-* [Setting up the Jumpbox](docs/02-jumpbox.md)
-* [Provisioning Compute Resources](docs/03-compute-resources.md)
-* [Provisioning the CA and Generating TLS Certificates](docs/04-certificate-authority.md)
-* [Generating Kubernetes Configuration Files for Authentication](docs/05-kubernetes-configuration-files.md)
-* [Generating the Data Encryption Config and Key](docs/06-data-encryption-keys.md)
-* [Bootstrapping the etcd Cluster](docs/07-bootstrapping-etcd.md)
-* [Bootstrapping the Kubernetes Control Plane](docs/08-bootstrapping-kubernetes-controllers.md)
-* [Bootstrapping the Kubernetes Worker Nodes](docs/09-bootstrapping-kubernetes-workers.md)
-* [Configuring kubectl for Remote Access](docs/10-configuring-kubectl.md)
-* [Provisioning Pod Network Routes](docs/11-pod-network-routes.md)
-* [Smoke Test](docs/12-smoke-test.md)
-* [Cleaning Up](docs/13-cleanup.md)
+## Repository Layout
+
+| Path | Contents | Origin |
+| --- | --- | --- |
+| `docs/` | original tutorial chapters | upstream |
+| `configs/`, `units/`, `ca.conf`, `downloads-*.txt` | config templates, systemd units, download lists | upstream |
+| `Vagrantfile` | lab VMs on libvirt | this fork |
+| `guide/en/`, `guide/ru/` | guides for this lab | this fork |
+| `ansible/` | playbook and roles | this fork |
+
+## Original Tutorial
+
+The original labs are in [`docs/`](docs), starting with [Prerequisites](docs/01-prerequisites.md). They target any four machines on the same network and use different node names and addresses than this lab.
+
+## License and Attribution
+
+This repository is a derivative of [Kubernetes The Hard Way](https://github.com/kelseyhightower/kubernetes-the-hard-way) by Kelsey Hightower.
+
+- The original tutorial is licensed under [CC BY-NC-SA 4.0](http://creativecommons.org/licenses/by-nc-sa/4.0/) (see [COPYRIGHT.md](COPYRIGHT.md)). The upstream repository also contains an Apache License 2.0 file ([LICENSE](LICENSE)), kept unchanged.
+- The guides in `guide/` are adaptations and translations of the original tutorial and are distributed under the same [CC BY-NC-SA 4.0](http://creativecommons.org/licenses/by-nc-sa/4.0/) license.
+- The `Vagrantfile` and the `ansible/` directory are distributed under the same terms. The unit templates in `ansible/roles/control-plane/templates/` and `ansible/roles/workers/templates/` are modified versions of the files in [`units/`](units) and [`configs/`](configs).
+
+Changes from the original: libvirt/Vagrant lab, node names `manager01`/`worker01`/`worker02`, pod CIDR `10.244.0.0/16`, certificate generation with plain `openssl` commands, explicit `--advertise-address`, `--service-cluster-ip-range` and `--node-ip`, and the Ansible automation. The full list is in [Differences from the Original Tutorial](guide/en/02-manual.md#differences-from-the-original-tutorial).
+
+This fork is not affiliated with or endorsed by the original author. Non-commercial use only.
