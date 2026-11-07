@@ -1,0 +1,20 @@
+- name: Каталог .ssh root
+  ansible.builtin.file:
+    path: /root/.ssh
+    state: directory
+    mode: "0700"
+
+- name: SSH-ключ root на jumpbox
+  community.crypto.openssh_keypair:
+    path: /root/.ssh/id_ed25519
+    type: ed25519
+  register: jumpbox_ssh_key
+
+- name: SSH-конфиг для подключения к нодам
+  ansible.builtin.copy:
+    dest: /root/.ssh/config
+    mode: "0600"
+    content: |
+      Host {{ groups['all'] | join(' ') }}
+        User root
+        StrictHostKeyChecking accept-new

@@ -1,0 +1,66 @@
+jumpbox_packages:
+  - curl
+  - vim
+  - openssl
+  - git
+  - gettext-base
+  - rsync
+  - python3-cryptography
+
+jumpbox_repo_url: "https://github.com/ZeroNiki/kubernetes-the-hard-way.git"
+jumpbox_repo_version: "master"
+
+jumpbox_downloads_dir: "{{ k8s_downloads_dir }}"
+jumpbox_archives_dir: "{{ k8s_workdir }}/archives"
+
+jumpbox_binaries:
+  - {
+      url: "https://dl.k8s.io/v{{ k8s_version }}/bin/linux/{{ arch }}/kubectl",
+      dest: client/kubectl,
+    }
+  - {
+      url: "https://dl.k8s.io/v{{ k8s_version }}/bin/linux/{{ arch }}/kube-apiserver",
+      dest: controller/kube-apiserver,
+    }
+  - {
+      url: "https://dl.k8s.io/v{{ k8s_version }}/bin/linux/{{ arch }}/kube-controller-manager",
+      dest: controller/kube-controller-manager,
+    }
+  - {
+      url: "https://dl.k8s.io/v{{ k8s_version }}/bin/linux/{{ arch }}/kube-scheduler",
+      dest: controller/kube-scheduler,
+    }
+  - {
+      url: "https://dl.k8s.io/v{{ k8s_version }}/bin/linux/{{ arch }}/kubelet",
+      dest: worker/kubelet,
+    }
+  - {
+      url: "https://dl.k8s.io/v{{ k8s_version }}/bin/linux/{{ arch }}/kube-proxy",
+      dest: worker/kube-proxy,
+    }
+  - {
+      url: "https://github.com/opencontainers/runc/releases/download/v{{ runc_version }}/runc.{{ arch }}",
+      dest: worker/runc,
+    }
+
+jumpbox_archives:
+  - url: "https://github.com/kubernetes-sigs/cri-tools/releases/download/v{{ crictl_version }}/crictl-v{{ crictl_version }}-linux-{{ arch }}.tar.gz"
+    dest: worker
+    creates: worker/crictl
+  - url: "https://github.com/containerd/containerd/releases/download/v{{ containerd_version }}/containerd-{{ containerd_version }}-linux-{{ arch }}.tar.gz"
+    dest: worker
+    strip: true
+    creates: worker/containerd
+  - url: "https://github.com/containernetworking/plugins/releases/download/v{{ cni_plugins_version }}/cni-plugins-linux-{{ arch }}-v{{ cni_plugins_version }}.tgz"
+    dest: cni-plugins
+    creates: cni-plugins/bridge
+  - url: "https://github.com/etcd-io/etcd/releases/download/v{{ etcd_version }}/etcd-v{{ etcd_version }}-linux-{{ arch }}.tar.gz"
+    dest: controller
+    strip: true
+    include: ["etcd-v{{ etcd_version }}-linux-{{ arch }}/etcd"]
+    creates: controller/etcd
+  - url: "https://github.com/etcd-io/etcd/releases/download/v{{ etcd_version }}/etcd-v{{ etcd_version }}-linux-{{ arch }}.tar.gz"
+    dest: client
+    strip: true
+    include: ["etcd-v{{ etcd_version }}-linux-{{ arch }}/etcdctl"]
+    creates: client/etcdctl

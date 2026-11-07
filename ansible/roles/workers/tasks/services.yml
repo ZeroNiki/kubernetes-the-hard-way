@@ -1,0 +1,26 @@
+- name: Запустить containerd, kubelet, kube-proxy
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop: "{{ workers_services }}"
+
+- name: Применить отложенные перезапуски
+  ansible.builtin.meta: flush_handlers
+
+- name: Дождаться статуса Ready
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - get
+      - node
+      - "{{ inventory_hostname }}"
+      - -o
+      - 'jsonpath={.status.conditions[?(@.type=="Ready")].status}'
+  delegate_to: "{{ groups['controllers'][0] }}"
+  register: workers_ready
+  until: workers_ready.stdout == "True"
+  retries: 20
+  delay: 5
+  changed_when: false

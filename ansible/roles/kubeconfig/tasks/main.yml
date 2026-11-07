@@ -1,0 +1,32 @@
+- name: Прочитать CA, сертификаты и ключи
+  ansible.builtin.slurp:
+    src: "{{ kubeconfig_dir }}/{{ item }}"
+  loop: "{{ ['ca.crt'] + kubeconfig_certs | product(['.crt', '.key']) | map('join') | list }}"
+  register: kubeconfig_pki
+  no_log: true
+
+- name: Kubeconfig компонентов
+  ansible.builtin.template:
+    src: kubeconfig.j2
+    dest: "{{ kubeconfig_dir }}/{{ kc.name }}.kubeconfig"
+    mode: "0600"
+  loop: "{{ kubeconfig_components }}"
+  loop_control:
+    loop_var: kc
+    label: "{{ kc.name }}"
+  diff: false
+
+- name: Kubeconfig kubelet
+  ansible.builtin.template:
+    src: kubeconfig.j2
+    dest: "{{ kubeconfig_dir }}/{{ node }}.kubeconfig"
+    mode: "0600"
+  loop: "{{ groups['workers'] }}"
+  loop_control:
+    loop_var: node
+  vars:
+    kc:
+      name: "{{ node }}"
+      user: "system:node:{{ node }}"
+      server: "{{ apiserver_url }}"
+  diff: false

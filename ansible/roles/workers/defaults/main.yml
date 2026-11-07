@@ -1,0 +1,23 @@
+workers_packages:
+  - socat
+  - conntrack
+  - ipset
+  - iptables
+  - kmod
+
+workers_sysctl:
+  net.bridge.bridge-nf-call-iptables: 1
+  net.bridge.bridge-nf-call-ip6tables: 1
+  net.ipv4.ip_forward: 1
+
+workers_dirs:
+  - /var/lib/kubelet
+  - /var/lib/kube-proxy
+  - /etc/cni/net.d
+  - /opt/cni/bin
+  - /etc/containerd
+
+workers_services:
+  - containerd
+  - kubelet
+  - kube-proxy

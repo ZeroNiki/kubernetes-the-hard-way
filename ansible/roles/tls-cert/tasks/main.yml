@@ -1,0 +1,53 @@
+- name: Ключ CA
+  community.crypto.openssl_privatekey:
+    path: "{{ tls_dir }}/ca.key"
+    size: "{{ cert_key_size }}"
+    mode: "0600"
+
+- name: CSR CA
+  community.crypto.openssl_csr:
+    path: "{{ tls_dir }}/ca.csr"
+    privatekey_path: "{{ tls_dir }}/ca.key"
+    common_name: Kubernetes-CA
+    use_common_name_for_san: false
+    basic_constraints: ["CA:TRUE"]
+    basic_constraints_critical: true
+    key_usage: [keyCertSign, cRLSign]
+    key_usage_critical: true
+
+- name: Самоподписанный сертификат CA
+  community.crypto.x509_certificate:
+    path: "{{ tls_dir }}/ca.crt"
+    csr_path: "{{ tls_dir }}/ca.csr"
+    privatekey_path: "{{ tls_dir }}/ca.key"
+    provider: selfsigned
+    selfsigned_not_after: "+{{ ca_validity_days }}d"
+
+- name: Клиентские сертификаты компонентов
+  ansible.builtin.include_tasks: cert.yml
+  loop: "{{ tls_client_certs }}"
+  loop_control:
+    loop_var: cert
+    label: "{{ cert.name }}"
+
+- name: Сертификаты kubelet (Node Authorizer)
+  ansible.builtin.include_tasks: cert.yml
+  loop: "{{ groups['workers'] }}"
+  loop_control:
+    loop_var: node
+  vars:
+    cert:
+      name: "{{ node }}"
+      cn: "system:node:{{ node }}"
+      o: system:nodes
+      eku: [clientAuth, serverAuth]
+      san: ["DNS:{{ node }}", "IP:{{ hostvars[node].ansible_host }}"]
+
+- name: Сертификат API-сервера
+  ansible.builtin.include_tasks: cert.yml
+  vars:
+    cert:
+      name: kube-api-server
+      cn: kubernetes
+      eku: [clientAuth, serverAuth]
+      san: "{{ tls_apiserver_san }}"

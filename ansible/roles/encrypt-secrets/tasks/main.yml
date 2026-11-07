@@ -1,0 +1,14 @@
+- name: Сгенерировать encryption-config.yaml
+  ansible.builtin.shell: |
+    set -euo pipefail
+    ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64) \
+      envsubst < configs/encryption-config.yaml > encryption-config.yaml
+  args:
+    chdir: "{{ k8s_workdir }}"
+    creates: "{{ k8s_workdir }}/encryption-config.yaml"
+    executable: /bin/bash
+
+- name: Права на файл с ключом
+  ansible.builtin.file:
+    path: "{{ k8s_workdir }}/encryption-config.yaml"
+    mode: "0600"

@@ -1,0 +1,57 @@
+- name: Бинарники в /usr/local/bin
+  ansible.posix.synchronize:
+    src: "{{ k8s_downloads_dir }}/worker/{{ item }}"
+    dest: /usr/local/bin/
+  loop: [kubelet, kube-proxy, runc, crictl]
+  delegate_to: "{{ jumpbox_host }}"
+  notify: Перезапустить worker-службы
+
+- name: Бинарники containerd в /bin
+  ansible.posix.synchronize:
+    src: "{{ k8s_downloads_dir }}/worker/{{ item }}"
+    dest: /bin/
+  loop: [containerd, containerd-shim-runc-v2, ctr]
+  delegate_to: "{{ jumpbox_host }}"
+  notify: Перезапустить worker-службы
+
+- name: CNI-плагины
+  ansible.posix.synchronize:
+    src: "{{ k8s_downloads_dir }}/cni-plugins/"
+    dest: /opt/cni/bin/
+  delegate_to: "{{ jumpbox_host }}"
+
+- name: Симлинк runc в /usr/bin
+  ansible.builtin.file:
+    src: /usr/local/bin/runc
+    dest: /usr/bin/runc
+    state: link
+
+- name: Сертификаты, kubeconfig и файлы из репозитория
+  ansible.posix.synchronize:
+    src: "{{ k8s_workdir }}/{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+    - { src: ca.crt, dest: /var/lib/kubelet/ }
+    - { src: "{{ inventory_hostname }}.crt", dest: /var/lib/kubelet/ }
+    - { src: "{{ inventory_hostname }}.key", dest: /var/lib/kubelet/ }
+    - { src: "{{ inventory_hostname }}.kubeconfig", dest: /var/lib/kubelet/kubeconfig }
+    - { src: kube-proxy.kubeconfig, dest: /var/lib/kube-proxy/kubeconfig }
+    - { src: configs/99-loopback.conf, dest: /etc/cni/net.d/ }
+    - { src: units/containerd.service, dest: /etc/systemd/system/ }
+    - { src: units/kube-proxy.service, dest: /etc/systemd/system/ }
+  loop_control:
+    label: "{{ item.src }}"
+  delegate_to: "{{ jumpbox_host }}"
+  notify: Перезапустить worker-службы
+
+- name: Конфиги, зависящие от ноды
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0644"
+  loop:
+    - { src: 10-bridge.conf.j2, dest: /etc/cni/net.d/10-bridge.conf }
+    - { src: kubelet-config.yaml.j2, dest: /var/lib/kubelet/kubelet-config.yaml }
+    - { src: kube-proxy-config.yaml.j2, dest: /var/lib/kube-proxy/kube-proxy-config.yaml }
+    - { src: kubelet.service.j2, dest: /etc/systemd/system/kubelet.service }
+  notify: Перезапустить worker-службы

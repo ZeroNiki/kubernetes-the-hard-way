@@ -1,0 +1,11 @@
+- name: Подготовка ОС
+  ansible.builtin.import_tasks: os.yml
+
+- name: Бинарники, сертификаты и конфиги
+  ansible.builtin.import_tasks: files.yml
+
+- name: Конфигурация containerd
+  ansible.builtin.import_tasks: containerd.yml
+
+- name: Запуск служб
+  ansible.builtin.import_tasks: services.yml

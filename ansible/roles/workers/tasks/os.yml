@@ -1,0 +1,35 @@
+- name: Пакеты для kubelet и kube-proxy
+  ansible.builtin.apt:
+    name: "{{ workers_packages }}"
+    update_cache: true
+
+- name: Выключить swap сейчас
+  ansible.builtin.command: swapoff -a
+  when: ansible_facts.swaptotal_mb > 0
+
+- name: Выключить swap после перезагрузки
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\sswap\s.*)$'
+    replace: '# \1'
+
+- name: Модуль br_netfilter
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
+    persistent: present
+
+- name: Параметры ядра для CNI bridge и kube-proxy
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/99-kubernetes.conf
+    reload: true
+  loop: "{{ workers_sysctl | dict2items }}"
+
+- name: Каталоги компонентов
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ workers_dirs }}"

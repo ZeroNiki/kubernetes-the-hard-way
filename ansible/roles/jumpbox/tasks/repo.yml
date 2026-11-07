@@ -1,0 +1,7 @@
+- name: Склонировать kubernetes-the-hard-way
+  ansible.builtin.git:
+    repo: "{{ jumpbox_repo_url }}"
+    dest: "{{ k8s_workdir }}"
+    version: "{{ jumpbox_repo_version }}"
+    depth: 1
+    update: false

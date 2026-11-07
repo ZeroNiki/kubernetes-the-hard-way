@@ -1,0 +1,4 @@
+- name: Установить утилиты
+  ansible.builtin.apt:
+    name: "{{ jumpbox_packages }}"
+    update_cache: true

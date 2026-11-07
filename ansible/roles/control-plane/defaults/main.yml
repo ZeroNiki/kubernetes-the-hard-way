@@ -1,0 +1,16 @@
+control_plane_files:
+  - ca.crt
+  - ca.key
+  - kube-api-server.crt
+  - kube-api-server.key
+  - service-accounts.crt
+  - service-accounts.key
+  - encryption-config.yaml
+  - kube-controller-manager.kubeconfig
+  - kube-scheduler.kubeconfig
+  - admin.kubeconfig
+
+control_plane_services:
+  - kube-apiserver
+  - kube-controller-manager
+  - kube-scheduler

@@ -1,0 +1,27 @@
+- name: "Ключ {{ cert.name }}"
+  community.crypto.openssl_privatekey:
+    path: "{{ tls_dir }}/{{ cert.name }}.key"
+    size: "{{ cert_key_size }}"
+    mode: "0600"
+
+- name: "CSR {{ cert.name }}"
+  community.crypto.openssl_csr:
+    path: "{{ tls_dir }}/{{ cert.name }}.csr"
+    privatekey_path: "{{ tls_dir }}/{{ cert.name }}.key"
+    common_name: "{{ cert.cn }}"
+    organization_name: "{{ cert.o | default(omit) }}"
+    subject_alt_name: "{{ cert.san | default(omit) }}"
+    use_common_name_for_san: false
+    basic_constraints: ["CA:FALSE"]
+    key_usage: [digitalSignature, keyEncipherment]
+    key_usage_critical: true
+    extended_key_usage: "{{ cert.eku | default(['clientAuth']) }}"
+
+- name: "Сертификат {{ cert.name }}, подписанный CA"
+  community.crypto.x509_certificate:
+    path: "{{ tls_dir }}/{{ cert.name }}.crt"
+    csr_path: "{{ tls_dir }}/{{ cert.name }}.csr"
+    provider: ownca
+    ownca_path: "{{ tls_dir }}/ca.crt"
+    ownca_privatekey_path: "{{ tls_dir }}/ca.key"
+    ownca_not_after: "+{{ cert_validity_days }}d"

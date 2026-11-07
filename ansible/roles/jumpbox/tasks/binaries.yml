@@ -1,0 +1,50 @@
+- name: Каталоги для архивов и бинарников
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ jumpbox_archives_dir }}"
+    - "{{ jumpbox_downloads_dir }}/client"
+    - "{{ jumpbox_downloads_dir }}/controller"
+    - "{{ jumpbox_downloads_dir }}/worker"
+    - "{{ jumpbox_downloads_dir }}/cni-plugins"
+
+- name: Скачать одиночные бинарники
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ jumpbox_downloads_dir }}/{{ item.dest }}"
+    mode: "0755"
+    timeout: 60
+  loop: "{{ jumpbox_binaries }}"
+  loop_control:
+    label: "{{ item.dest }}"
+
+- name: Скачать архивы
+  ansible.builtin.get_url:
+    url: "{{ item }}"
+    dest: "{{ jumpbox_archives_dir }}/{{ item | basename }}"
+    mode: "0644"
+    timeout: 60
+  loop: "{{ jumpbox_archives | map(attribute='url') | unique }}"
+  loop_control:
+    label: "{{ item | basename }}"
+
+- name: Распаковать архивы
+  ansible.builtin.unarchive:
+    src: "{{ jumpbox_archives_dir }}/{{ item.url | basename }}"
+    dest: "{{ jumpbox_downloads_dir }}/{{ item.dest }}"
+    remote_src: true
+    extra_opts: "{{ ['--strip-components=1'] if item.strip | default(false) else [] }}"
+    include: "{{ item.include | default(omit) }}"
+    creates: "{{ jumpbox_downloads_dir }}/{{ item.creates }}"
+  loop: "{{ jumpbox_archives }}"
+  loop_control:
+    label: "{{ item.creates }}"
+
+- name: Установить kubectl
+  ansible.builtin.copy:
+    src: "{{ jumpbox_downloads_dir }}/client/kubectl"
+    dest: /usr/local/bin/kubectl
+    remote_src: true
+    mode: "0755"

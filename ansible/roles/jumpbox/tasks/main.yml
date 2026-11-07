@@ -1,0 +1,11 @@
+- name: Утилиты
+  ansible.builtin.import_tasks: packages.yml
+
+- name: Репозиторий с конфигами и unit-файлами
+  ansible.builtin.import_tasks: repo.yml
+
+- name: Бинарники Kubernetes и kubectl
+  ansible.builtin.import_tasks: binaries.yml
+
+- name: SSH-ключ для раздачи файлов на ноды
+  ansible.builtin.import_tasks: ssh.yml

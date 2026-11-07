@@ -1,0 +1,49 @@
+- name: Jumpbox — утилиты, репозиторий, бинарники, SSH-ключ
+  hosts: jump
+  tags: [jumpbox]
+  roles:
+    - jumpbox
+
+- name: Ноды — доступ root с jumpbox
+  hosts: all
+  tags: [jumpbox]
+  tasks:
+    - name: Ключ jumpbox и rsync
+      ansible.builtin.import_role:
+        name: jumpbox
+        tasks_from: nodes
+
+- name: PKI, kubeconfig и ключ шифрования на jumpbox
+  hosts: jump
+  tags: [pki]
+  roles:
+    - tls-cert
+    - kubeconfig
+    - encrypt-secrets
+
+- name: etcd и control plane
+  hosts: controllers
+  tags: [control-plane]
+  module_defaults:
+    ansible.posix.synchronize:
+      set_remote_user: false
+      private_key: "{{ jumpbox_private_key }}"
+  roles:
+    - etcd
+    - control-plane
+
+- name: Worker-ноды
+  hosts: workers
+  tags: [workers]
+  module_defaults:
+    ansible.posix.synchronize:
+      set_remote_user: false
+      private_key: "{{ jumpbox_private_key }}"
+  roles:
+    - workers
+
+- name: Маршруты подов между нодами
+  hosts: k8s
+  tags: [network]
+  roles:
+    - network

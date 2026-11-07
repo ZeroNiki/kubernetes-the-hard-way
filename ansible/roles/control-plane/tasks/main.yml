@@ -1,0 +1,88 @@
+- name: Каталоги control plane
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: /var/lib/kubernetes, mode: "0700" }
+    - { path: /etc/kubernetes/config, mode: "0755" }
+
+- name: Бинарники control plane и kubectl
+  ansible.posix.synchronize:
+    src: "{{ k8s_downloads_dir }}/{{ item }}"
+    dest: /usr/local/bin/
+  loop:
+    - controller/kube-apiserver
+    - controller/kube-controller-manager
+    - controller/kube-scheduler
+    - client/kubectl
+  delegate_to: "{{ jumpbox_host }}"
+  notify: Перезапустить control plane
+
+- name: Сертификаты, kubeconfig и ключ шифрования
+  ansible.posix.synchronize:
+    src: "{{ k8s_workdir }}/{{ item }}"
+    dest: /var/lib/kubernetes/
+  loop: "{{ control_plane_files }}"
+  delegate_to: "{{ jumpbox_host }}"
+  notify: Перезапустить control plane
+
+- name: Файлы из репозитория без изменений
+  ansible.posix.synchronize:
+    src: "{{ k8s_workdir }}/{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+    - { src: configs/kube-scheduler.yaml, dest: /etc/kubernetes/config/ }
+    - { src: units/kube-scheduler.service, dest: /etc/systemd/system/ }
+    - { src: configs/kube-apiserver-to-kubelet.yaml, dest: /var/lib/kubernetes/ }
+  loop_control:
+    label: "{{ item.src }}"
+  delegate_to: "{{ jumpbox_host }}"
+  notify: Перезапустить control plane
+
+- name: Unit-файлы apiserver и controller-manager
+  ansible.builtin.template:
+    src: "{{ item }}.service.j2"
+    dest: "/etc/systemd/system/{{ item }}.service"
+    mode: "0644"
+  loop:
+    - kube-apiserver
+    - kube-controller-manager
+  notify: Перезапустить control plane
+
+- name: Запустить службы control plane
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop: "{{ control_plane_services }}"
+
+- name: Применить отложенные перезапуски
+  ansible.builtin.meta: flush_handlers
+
+- name: Дождаться готовности API-сервера
+  ansible.builtin.command: kubectl get --raw /readyz --kubeconfig /var/lib/kubernetes/admin.kubeconfig
+  register: control_plane_readyz
+  until: control_plane_readyz.rc == 0
+  retries: 20
+  delay: 3
+  changed_when: false
+
+- name: Каталог ~/.kube root
+  ansible.builtin.file:
+    path: /root/.kube
+    state: directory
+    mode: "0700"
+
+- name: Kubeconfig администратора для root
+  ansible.builtin.copy:
+    src: /var/lib/kubernetes/admin.kubeconfig
+    dest: /root/.kube/config
+    remote_src: true
+    mode: "0600"
+
+- name: RBAC для доступа API-сервера к kubelet
+  ansible.builtin.command: kubectl apply -f /var/lib/kubernetes/kube-apiserver-to-kubelet.yaml
+  register: control_plane_rbac
+  changed_when: control_plane_rbac.stdout_lines | reject('search', 'unchanged') | list | length > 0

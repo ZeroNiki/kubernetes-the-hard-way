@@ -1,0 +1,9 @@
+- name: Установить rsync
+  ansible.builtin.apt:
+    name: rsync
+    update_cache: true
+
+- name: Разрешить вход root по ключу jumpbox
+  ansible.posix.authorized_key:
+    user: root
+    key: "{{ hostvars[groups['jump'][0]].jumpbox_ssh_key.public_key }}"

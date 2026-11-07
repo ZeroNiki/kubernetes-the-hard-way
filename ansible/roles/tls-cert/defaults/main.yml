@@ -1,0 +1,18 @@
+tls_dir: "{{ k8s_workdir }}"
+
+tls_client_certs:
+  - { name: admin, cn: admin, o: system:masters }
+  - { name: kube-proxy, cn: system:kube-proxy }
+  - { name: kube-controller-manager, cn: system:kube-controller-manager }
+  - { name: kube-scheduler, cn: system:kube-scheduler }
+  - { name: service-accounts, cn: service-accounts }
+
+tls_apiserver_san:
+  - DNS:kubernetes
+  - DNS:kubernetes.default
+  - DNS:kubernetes.default.svc
+  - "DNS:kubernetes.default.svc.{{ cluster_domain }}"
+  - "DNS:{{ groups['controllers'][0] }}"
+  - IP:127.0.0.1
+  - "IP:{{ apiserver_host }}"
+  - "IP:{{ kubernetes_service_ip }}"

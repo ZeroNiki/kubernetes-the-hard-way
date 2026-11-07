@@ -1,0 +1,6 @@
+- name: Перезапустить control plane
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: restarted
+    daemon_reload: true
+  loop: "{{ control_plane_services }}"

@@ -1,0 +1,40 @@
+- name: Каталог данных etcd
+  ansible.builtin.file:
+    path: /var/lib/etcd
+    state: directory
+    mode: "0700"
+
+- name: Бинарники etcd и etcdctl
+  ansible.posix.synchronize:
+    src: "{{ k8s_downloads_dir }}/{{ item }}"
+    dest: /usr/local/bin/
+  loop:
+    - controller/etcd
+    - client/etcdctl
+  delegate_to: "{{ jumpbox_host }}"
+  notify: Перезапустить etcd
+
+- name: Unit-файл etcd
+  ansible.posix.synchronize:
+    src: "{{ k8s_workdir }}/units/etcd.service"
+    dest: /etc/systemd/system/etcd.service
+  delegate_to: "{{ jumpbox_host }}"
+  notify: Перезапустить etcd
+
+- name: Запустить etcd
+  ansible.builtin.systemd_service:
+    name: etcd
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Применить отложенные перезапуски
+  ansible.builtin.meta: flush_handlers
+
+- name: Проверить etcd
+  ansible.builtin.command: etcdctl member list --endpoints=http://127.0.0.1:2379
+  register: etcd_members
+  until: etcd_members.rc == 0
+  retries: 5
+  delay: 3
+  changed_when: false

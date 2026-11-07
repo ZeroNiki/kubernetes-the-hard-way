@@ -1,0 +1,11 @@
+- name: Текущая таблица маршрутов
+  ansible.builtin.command: ip route show
+  register: network_routes
+  changed_when: false
+
+- name: Маршруты к подсетям подов других нод
+  ansible.builtin.command: >-
+    ip route replace {{ hostvars[item].pod_subnet }}
+    via {{ hostvars[item].ansible_host }}
+  loop: "{{ groups['workers'] | difference([inventory_hostname]) }}"
+  when: (hostvars[item].pod_subnet ~ ' via ' ~ hostvars[item].ansible_host) not in network_routes.stdout

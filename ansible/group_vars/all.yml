@@ -1,0 +1,28 @@
+k8s_version: "1.32.3"
+etcd_version: "3.6.0-rc.3"
+containerd_version: "2.1.0-beta.0"
+runc_version: "1.3.0-rc.1"
+cni_plugins_version: "1.6.2"
+crictl_version: "1.32.0"
+arch: "amd64"
+
+k8s_workdir: "/root/kubernetes-the-hard-way"
+k8s_downloads_dir: "{{ k8s_workdir }}/downloads"
+
+jumpbox_host: "{{ groups['jump'][0] }}"
+jumpbox_private_key: /root/.ssh/id_ed25519
+
+cluster_name: "kubernetes-the-hard-way"
+cluster_domain: "cluster.local"
+cluster_cidr: "10.244.0.0/16"
+service_cidr: "10.32.0.0/24"
+kubernetes_service_ip: "10.32.0.1"
+cluster_dns_ip: "10.32.0.10"
+
+apiserver_host: "{{ hostvars[groups['controllers'][0]].ansible_host }}"
+apiserver_port: 6443
+apiserver_url: "https://{{ apiserver_host }}:{{ apiserver_port }}"
+
+ca_validity_days: 3650
+cert_validity_days: 365
+cert_key_size: 2048

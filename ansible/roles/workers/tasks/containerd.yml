@@ -1,0 +1,12 @@
+- name: Конфиг containerd по умолчанию
+  ansible.builtin.shell: containerd config default > /etc/containerd/config.toml
+  args:
+    creates: /etc/containerd/config.toml
+  notify: Перезапустить worker-службы
+
+- name: SystemdCgroup = true для runc
+  ansible.builtin.lineinfile:
+    path: /etc/containerd/config.toml
+    insertafter: 'runtimes\.runc\.options\]$'
+    line: "            SystemdCgroup = true"
+  notify: Перезапустить worker-службы

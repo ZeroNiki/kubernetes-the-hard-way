@@ -1,0 +1,10 @@
+kubeconfig_dir: "{{ k8s_workdir }}"
+kubeconfig_local_server: "https://127.0.0.1:{{ apiserver_port }}"
+
+kubeconfig_components:
+  - { name: kube-proxy, user: system:kube-proxy, server: "{{ apiserver_url }}" }
+  - { name: kube-controller-manager, user: system:kube-controller-manager, server: "{{ kubeconfig_local_server }}" }
+  - { name: kube-scheduler, user: system:kube-scheduler, server: "{{ kubeconfig_local_server }}" }
+  - { name: admin, user: admin, server: "{{ kubeconfig_local_server }}" }
+
+kubeconfig_certs: "{{ kubeconfig_components | map(attribute='name') | list + groups['workers'] }}"
